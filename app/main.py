@@ -3,13 +3,21 @@ from app import models
 from app.database import engine
 from .routers import user, post, auth, vote
 from .config import settings
+from fastapi.middleware.cors import CORSMiddleware
 
 
 
-models.Base.metadata.create_all(bind=engine)
+# models.Base.metadata.create_all(bind=engine)
 
+origins = ["*"]
 app = FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 my_posts = [{"title": "title of post 1", "content": "content of post 1", "id":1}, {"title": "favourite foods", "content":"I like pizza","id":2}]
 
@@ -31,4 +39,4 @@ app.include_router(vote.router)
 
 @app.get("/")
 def root():
-    return "Welcome to my api"
+    return {"message":"Welcome to my api"}
