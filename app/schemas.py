@@ -38,11 +38,6 @@ class Post(PostBase):
     class config:
         orm_mode = True
 
-class PostOut(BaseModel):
-    Post: Post
-    votes: int
-    class config:
-        orm_mode = True
 
 class PasswordUpdate(BaseModel):
     old_password: str
