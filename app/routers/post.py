@@ -1,8 +1,9 @@
 from typing import List, Optional
-from fastapi import Depends, HTTPException, status, APIRouter
+from fastapi import Depends, HTTPException, status, APIRouter, Response
 from sqlalchemy import func
 from .. import models, schemas, oauth2
-from ..database import Session, get_db
+from ..database import get_db
+from sqlalchemy.orm import Session
 
 router = APIRouter(
     prefix="/posts",
@@ -14,22 +15,23 @@ router = APIRouter(
     # posts = db.query(models.Post).all()
     # return {"data":posts}
 
-@router.get("/")
+@router.get("/", response_model=List[schemas.PostOut])
 def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), limit: int = 5, skip: int = 0, search: Optional[str] = ""):
     # cursor.execute("""SELECT * FROM posts""")
     # posts = cursor.fetchall()
     # conn.commit()
     # print(current_user)
-    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
 
-    results = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id)
-    print(results)
+
+    posts = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    
     return posts
 
 
 @router.get("/my_posts")
-def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
-    my_posts = db.query(models.Post).filter(models.Post.user_id == current_user.id).all()
+def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), limit: int = 5, skip: int = 0, search: Optional[str] = ""):
+
+    my_posts = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).filter(models.Post.title.contains(search), models.Post.user_id == current_user.id).limit(limit).offset(skip).all()
 
     return my_posts
 
@@ -49,13 +51,15 @@ def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), curren
     return post
 
 
-@router.get("/{id}", response_model = schemas.Post)
+@router.get("/{id}", response_model = schemas.PostOut)
 def get_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     # # post = find_post(id)
     # cursor.execute(""" SELECT * FROM posts WHERE id = %s """,f"{id}")
     # post = cursor.fetchall()
 
-    post = db.query(models.Post).filter(models.Post.id == id).first()
+    # post = db.query(models.Post).filter(models.Post.id == id).first()
+    post = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).filter(models.Post.id == id).first()
+
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id: {id} was not found")

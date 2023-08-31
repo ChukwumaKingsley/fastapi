@@ -15,4 +15,4 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-print(settings.database_password)
+# print(settings.database_password)

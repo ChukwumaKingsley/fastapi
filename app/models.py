@@ -14,6 +14,7 @@ class Post(Base):
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    phone_numbre = Column(String, nullable=False)
     # votes = Column(Integer, nullable=False)
     owner = relationship("User")
 
