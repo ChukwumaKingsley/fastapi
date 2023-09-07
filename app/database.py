@@ -7,7 +7,9 @@ from sqlalchemy.orm import sessionmaker, Session
 from .config import settings
 
 
-SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.database_username}:{settings.database_password}@{settings.database_hostname}/{settings.database_name}"
+# SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.database_username}:{settings.database_password}@{settings.database_hostname}/{settings.database_name}"
+SQLALCHEMY_DATABASE_URL = f"postgres://{settings.database_username}:{settings.database_password}@{settings.database_hostname}/{settings.database_name}"
+
 # SQLALCHEMY_DATABASE_URL = "postgresql://postgres:domKing@localhost/fastapi"
 # SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
 
