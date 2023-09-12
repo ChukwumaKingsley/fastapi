@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, EmailStr, conint
+from pydantic import BaseModel, EmailStr, conint, validator
 from datetime import datetime
 
 class UserCreate(BaseModel):
@@ -53,4 +53,11 @@ class TokenData(BaseModel):
 
 class Vote(BaseModel):
     post_id: int
-    dir: conint(le=1)
+    # dir: conint(ge=0, le=1)
+    dir: int
+    
+    @validator("dir")
+    def validate_dir(cls, value):
+        if value not in (0, 1):
+            raise ValueError("Vote 'dir' must be either 0 or 1")
+        return value
