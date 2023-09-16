@@ -1,11 +1,10 @@
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 import pytest
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.config import settings
 from app.database import get_db, Base
-from random import randint
 
 
 SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.database_username}:{settings.database_password}@{settings.database_hostname}/{settings.database_name}_test"
@@ -15,7 +14,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 client = TestClient(app)
 
-@pytest.fixture
+@pytest.fixture()
 def session():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
@@ -25,7 +24,7 @@ def session():
     finally:
         db.close()
 
-@pytest.fixture
+@pytest.fixture()
 def client(session):
     def overide_get_db():
         try:
