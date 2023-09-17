@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import Depends, HTTPException, status, APIRouter
 from .. import models, schemas, utils, oauth2
 from ..database import Session, get_db
@@ -25,15 +26,15 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-@router.get("/{id}", response_model = schemas.User)
+@router.get("/user/{id}", response_model = schemas.User)
 def get_user(id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail = f"User with id {id} does not exist!")
     return user
 
-@router.get("/all", response_model=schemas.User)
-def get_users(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+@router.get("/all", response_model=List[schemas.User])
+def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     users = db.query(models.User).all()
     return users
 
