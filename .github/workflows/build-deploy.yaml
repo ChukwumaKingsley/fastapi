@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: pulling git repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: say hi
         run: echo "Hi dude!"
@@ -94,16 +94,8 @@ jobs:
     needs: [build]
 
     steps:
-      - name: pulling git repo
-        uses: actions/checkout@v2
-      - name: deploying stuff
-        uses: bounceapp/render-action@0.6.0
+      - name: Deploy to production
+        uses: johnbeynon/render-deploy-action@v0.0.8
         with:
-          # api-key: ${{ secrets.RENDER_API_KEY }}
-          service-id: ${{ secrets.RENDER_SERVICE_ID }}
-          retries: 20
-          wait: 16000
-          sleep: 30000
-
-
-          
+          service-id: ${{ secrets.SERVICE_ID }} #part of the deploy hook
+          api-key: ${{ secrets.RENDER_API_KEY }} #from account settings on render
