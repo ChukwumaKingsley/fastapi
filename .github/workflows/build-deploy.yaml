@@ -8,7 +8,7 @@ name: Build and Deploy Code
 #     branches:
 #       - "main"
 
-on: [push, pull-request]
+on: [push, pull_request]
 
 jobs:
   job1:
