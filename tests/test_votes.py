@@ -3,8 +3,8 @@ from app import models
 
 
 @pytest.fixture()
-def test_vote(test_post, session, test_user2):
-    new_vote = models.Vote(post_id=test_post[3].id, user_id=test_user2['id'])
+def test_vote(test_post, session, test_user):
+    new_vote = models.Vote(post_id=test_post[3].id, user_id=test_user['id'])
     session.add(new_vote)
     session.commit()
 
