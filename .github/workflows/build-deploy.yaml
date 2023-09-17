@@ -97,12 +97,13 @@ jobs:
       - name: pulling git repo
         uses: actions/checkout@v2
       - name: deploying stuff
-        uses: kingsleywizard/render-deploy@v1.0.0
+        uses: bounceapp/render-action@0.6.0
         with:
           api-key: ${{ secrets.RENDER_API_KEY }}
           service-id: ${{ secrets.RENDER_SERVICE_ID }}
-          interval: 20 # optional
-          timeout: 300 # optional
+          retries: 20
+          wait: 16000
+          sleep: 30000
 
 
           
