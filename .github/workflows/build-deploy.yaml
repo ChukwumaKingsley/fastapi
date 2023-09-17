@@ -13,7 +13,7 @@ on: [push, pull_request]
 jobs:
   build:
     environment:
-      name: production
+      name: testing
     env:
       DATABASE_HOSTNAME: ${{secrets.DATABASE_HOSTNAME}}
       DATABASE_PORT: ${{secrets.DATABASE_PORT}}
