@@ -18,27 +18,24 @@ def vote(vote: schemas.Vote, db: Session = Depends(get_db), current_user: int = 
     
     vote_query = db.query(models.Vote).filter(models.Vote.post_id == vote.post_id, models.Vote.user_id == current_user.id)
     found_vote = vote_query.first()
-    if (vote.dir == 1):
+
+    if vote.dir == 1:
         if found_vote:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"The user {current_user.email} has voted on this post already")
+            # If the user has already voted (dir == 1), remove the vote
+            vote_query.delete(synchronize_session=False)
+            db.commit()
+            return "Vote removed successfully!"
         
         new_vote = models.Vote(post_id=vote.post_id, user_id=current_user.id)
         db.add(new_vote)
         db.commit()
-        # votes = db.query(models.Vote).filter(models.Vote.post_id == vote.post_id).count()
-        # post_query.update({"votes": votes}, synchronize_session=False)
-        
-        db.commit()
-        return "successfully voted!"
-
+        return "Vote added successfully!"
+    
     else:
         if not found_vote:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vote does not exist")
+        
+        # The user is trying to remove a vote (dir != 1)
         vote_query.delete(synchronize_session=False)
-
-        # votes = db.query(models.Vote).filter(models.Vote.post_id == vote.post_id).count()
-        # db.commit()
-        # print(votes)
-        # post_query.update({"votes": votes}, synchronize_session=False)
         db.commit()
-        return "successfully deleted vote!"
+        return "Vote removed successfully!"

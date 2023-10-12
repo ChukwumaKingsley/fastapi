@@ -61,3 +61,14 @@ class Vote(BaseModel):
         if value not in (0, 1):
             raise ValueError("Vote 'dir' must be either 0 or 1")
         return value
+    
+class DownVote(BaseModel):
+    post_id: int
+    # dir: conint(ge=0, le=1)
+    dir: int
+    
+    @field_validator("dir")
+    def validate_dir(cls, value):
+        if value not in (0, 1):
+            raise ValueError("Vote 'dir' must be either 0 or 1")
+        return value
