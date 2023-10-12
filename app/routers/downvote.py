@@ -17,6 +17,16 @@ def downvote(downvote: schemas.DownVote, db: Session = Depends(get_db), current_
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post does not exist")
     
+    # Check if the user has previously voted the post
+    vote_query = db.query(models.Vote).filter(models.Vote.post_id == downvote.post_id, models.Vote.user_id == current_user.id)
+    found_vote = vote_query.first()
+
+    # Remove the downvote if it exists
+    if found_vote:
+        vote_query.delete(synchronize_session=False)
+        print("Found vote, deleted it!")
+
+    # Continue with processing the upvote logic
     downvote_query = db.query(models.DownVote).filter(models.DownVote.post_id == downvote.post_id, models.DownVote.user_id == current_user.id)
     found_downvote = downvote_query.first()
 
