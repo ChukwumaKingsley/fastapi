@@ -26,8 +26,15 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
+@router.get("/user/me", response_model = schemas.User)
+def get_user(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail = f"User with id {id} does not exist!")
+    return user
+
 @router.get("/user/{id}", response_model = schemas.User)
-def get_user(id: int, db: Session = Depends(get_db)):
+def get_user(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     user = db.query(models.User).filter(models.User.id == id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail = f"User with id {id} does not exist!")
@@ -38,16 +45,19 @@ def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oau
     users = db.query(models.User).all()
     return users
 
-@router.put("/change_password/{email}")
-def update_password(email: EmailStr, UserData: schemas.PasswordUpdate, db: Session = Depends(get_db)):
-    user_query = db.query(models.User).filter(models.User.email == email)
+@router.put("/change_password", status_code=status.HTTP_200_OK)
+def update_password(UserData: schemas.PasswordUpdate, current_user: int = Depends(oauth2.get_current_user), db: Session = Depends(get_db)):
+    user_query = db.query(models.User).filter(models.User.id == current_user.id)
     user = user_query.first()
     
     if not user: #check if the user exists
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail = f'User {email} does not exists.')
+                            detail = f'User does not exists.')
     if not utils.verify(UserData.old_password, user.password): #check if the old password is correct
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Incorrect old password!")
+    if utils.verify(UserData.password, user.password): #Ensure the new and old passwords are not thesame
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Old and new passwords cannot be thesame")
+
     
     UserData.password = utils.hash(UserData.password)
     password_update = {"password": UserData.password}
@@ -56,12 +66,15 @@ def update_password(email: EmailStr, UserData: schemas.PasswordUpdate, db: Sessi
     db.commit()
     return "Password was successfully changed"
 
-@router.put("/update_user/{id}")
-def update_user(id: int, user_data: schemas.UserUpdate, db: Session = Depends(get_db)):
+@router.put("/update_user/{id}", status_code=status.HTTP_200_OK)
+def update_user(id: int, user_data: schemas.UserUpdate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     user = db.query(models.User).filter(models.User.id == id).first()
 
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with ID {id} does not exist.")
+    
+    if id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized to change another's details")
 
     for key, value in user_data.dict().items():
         setattr(user, key, value)

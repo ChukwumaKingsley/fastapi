@@ -24,7 +24,6 @@ class UserLogin(BaseModel):
     password: str
 
 class UserUpdate(BaseModel):
-    email: EmailStr
     name: str
     profile_pic: str
 
