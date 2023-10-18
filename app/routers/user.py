@@ -55,3 +55,17 @@ def update_password(email: EmailStr, UserData: schemas.PasswordUpdate, db: Sessi
     user_query.update(password_update, synchronize_session = False)
     db.commit()
     return "Password was successfully changed"
+
+@router.put("/update_user/{id}")
+def update_user(id: int, user_data: schemas.UserUpdate, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == id).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with ID {id} does not exist.")
+
+    for key, value in user_data.dict().items():
+        setattr(user, key, value)
+
+    db.commit()
+    db.refresh(user)
+    return user
