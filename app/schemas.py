@@ -25,7 +25,6 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     name: str
-    profile_pic: str
 
 class PostBase(BaseModel):
     title: str
