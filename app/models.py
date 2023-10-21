@@ -12,9 +12,8 @@ class Post(Base):
     content = Column(String, nullable=False)
     published = Column(Boolean, server_default = "True", nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
-
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    # votes = Column(Integer, nullable=False)
+    user_name = Column(String, nullable=False)
     owner = relationship("User")
 
 class User(Base):

@@ -16,13 +16,18 @@ router = APIRouter(
 
 @router.get("/")
 def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), limit: int = 5, skip: int = 0, search: Optional[str] = ""):
-    # cursor.execute("""SELECT * FROM posts""")
-    # posts = cursor.fetchall()
-    # conn.commit()
-    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
 
-    results = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id)
-    return posts
+    posts = db.query(models.Post).filter(models.Post.published == True).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+
+    from sqlalchemy import func
+
+    results_query = db.query(models.Post.id, models.Post.title, models.Post.content, models.Post.created_at, models.Post.user_name, func.count(models.Vote.post_id).label("votes"), func.count(models.DownVote.post_id).label("downvote")) \
+    .outerjoin(models.Vote, models.Vote.post_id == models.Post.id).outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id) \
+    .group_by(models.Post.id).filter(models.Post.published)
+    results = results_query.all()
+    json_results = [{"post_id": post_id, 'title': title, 'content': content, 'created_at': created_at, 'user_name': user_name, 'vote_count': vote_count, 'downvote_count': downvote_count} for post_id, title, content, created_at, user_name, vote_count, downvote_count in results]
+
+    return json_results
 
 
 @router.get("/my_posts")
@@ -34,13 +39,11 @@ def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oaut
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model = schemas.PostCreate)
 def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
-    # cursor.execute(""" INSERT INTO posts(title, content, published) VALUES (%s,%s, %s) returning * """,
-    #                (post.title, post.content, post.publish))
-    # post = cursor.fetchall()
-    # conn.commit()
-    # new_post = models.Post(title=post.title, content=post.content, published=post.published)
 
-    new_post = models.Post(**post.dict(), user_id = current_user.id)
+    user_query = db.query(models.User).filter(models.User.id == current_user.id).first()
+    user_name = user_query.name 
+
+    new_post = models.Post(**post.dict(), user_id = current_user.id, user_name = user_name)
     db.add(new_post)
     db.commit()
     db.refresh(new_post)

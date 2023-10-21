@@ -55,18 +55,18 @@ def update_password(UserData: schemas.PasswordUpdate, current_user: int = Depend
                             detail = f'User does not exists.')
     if not utils.verify(UserData.old_password, user.password): #check if the old password is correct
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Incorrect old password!")
-    if utils.verify(UserData.password, user.password): #Ensure the new and old passwords are not thesame
+    if utils.verify(UserData.new_password, user.password): #Ensure the new and old passwords are not thesame
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Old and new passwords cannot be thesame")
 
     
-    UserData.password = utils.hash(UserData.password)
-    password_update = {"password": UserData.password}
+    UserData.new_password = utils.hash(UserData.new_password)
+    password_update = {"password": UserData.new_password}
 
     user_query.update(password_update, synchronize_session = False)
     db.commit()
     return "Password was successfully changed"
 
-@router.put("/update", status_code=status.HTTP_200_OK)
+@router.put("/update", status_code=status.HTTP_200_OK, response_model=schemas.UserUpdated)
 def update_user(user_data: schemas.UserUpdate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     user = db.query(models.User).filter(models.User.id == current_user.id).first()
 

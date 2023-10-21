@@ -26,6 +26,11 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     name: str
 
+class UserUpdated(UserUpdate):
+    email: EmailStr
+    id: int
+
+
 class PostBase(BaseModel):
     title: str
     content: str
@@ -46,11 +51,12 @@ class Post(PostBase):
 
 class PasswordUpdate(BaseModel):
     old_password: str
-    password: str
+    new_password: str
 
 class Token(BaseModel):
     access_token: str
     token_type: str
+    user: int
 
 class TokenData(BaseModel):
     id: Optional[str] = None
@@ -66,6 +72,9 @@ class Vote(BaseModel):
         if value not in (0, 1):
             raise ValueError("Vote 'dir' must be either 0 or 1")
         return value
+
+class Counts(BaseModel):
+    counts: int
     
 class DownVote(BaseModel):
     post_id: int
