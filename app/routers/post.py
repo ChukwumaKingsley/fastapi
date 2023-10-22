@@ -1,6 +1,8 @@
 from typing import List, Optional
 from fastapi import Depends, HTTPException, status, APIRouter
-from sqlalchemy import func
+from fastapi.responses import JSONResponse
+from sqlalchemy import String, case, desc, func, and_, literal
+from sqlalchemy.sql import select
 from .. import models, schemas, oauth2
 from ..database import Session, get_db
 
@@ -16,19 +18,51 @@ router = APIRouter(
 
 @router.get("/")
 def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), limit: int = 5, skip: int = 0, search: Optional[str] = ""):
+    
+    subquery_vote = case((func.count().filter(models.Vote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_voted")
+    subquery_downvote = case((func.count().filter(models.DownVote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_downvoted")
 
-    posts = db.query(models.Post).filter(models.Post.published == True).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    posts_query =  posts_query = (
+        db.query(
+            models.Post.id,
+            models.Post.user_id,
+            models.Post.user_name,
+            models.Post.title,
+            models.Post.content,
+            func.cast(models.Post.created_at, String).label("created_at"),
+            func.count(models.Vote.post_id).label("votes"),
+            func.count(models.DownVote.post_id).label("downvotes"),
+            subquery_vote,
+            subquery_downvote,
+        )
+        .outerjoin(models.Vote, models.Vote.post_id == models.Post.id)
+        .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
+        .group_by(models.Post.id)
+        .filter(models.Post.published == True)
+        .filter(models.Post.title.contains(search))
+        .order_by(desc(models.Post.created_at))
+        .limit(limit)
+        .offset(skip)
+        .all()
+    )
 
-    from sqlalchemy import func
+    def serialize_post(post):
+        post_dict = {
+        'id': post.id,
+        'user_id': post.user_id,
+        'user_name': post.user_name,
+        'title': post.title,
+        'content': post.content,
+        'created_at': post.created_at,  # Use the created_at_str we added
+        'votes': post.votes,
+        'downvotes': post.downvotes,
+        'user_voted': post.user_voted,
+        'user_downvoted': post.user_downvoted,
+    }
+        return post_dict
+    serialized_posts = [serialize_post(post) for post in posts_query]
 
-    results_query = db.query(models.Post.id, models.Post.title, models.Post.content, models.Post.created_at, models.Post.user_name, func.count(models.Vote.post_id).label("votes"), func.count(models.DownVote.post_id).label("downvote")) \
-    .outerjoin(models.Vote, models.Vote.post_id == models.Post.id).outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id) \
-    .group_by(models.Post.id).filter(models.Post.published)
-    results = results_query.all()
-    json_results = [{"post_id": post_id, 'title': title, 'content': content, 'created_at': created_at, 'user_name': user_name, 'vote_count': vote_count, 'downvote_count': downvote_count} for post_id, title, content, created_at, user_name, vote_count, downvote_count in results]
-
-    return json_results
-
+    return JSONResponse(content=serialized_posts)
 
 @router.get("/my_posts")
 def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
