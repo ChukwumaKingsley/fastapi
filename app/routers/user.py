@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import Depends, HTTPException, status, APIRouter
 from sqlalchemy import func
 from .. import models, schemas, utils, oauth2
@@ -16,11 +16,12 @@ router = APIRouter(
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
     #hash the password
-    existing_user =  db.query(models.User).filter(models.User.email == user.email).first()
+    existing_user =  db.query(models.User).filter(models.User.email == user.email.lower()).first()
     if existing_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"User with this email already exists")
     hashed_password = utils.hash(user.password)
     user.password = hashed_password
+    user.email = user.email.lower()
     new_user = models.User(**user.dict())
     db.add(new_user)
     db.commit()
@@ -58,8 +59,8 @@ def get_user(id: int, db: Session = Depends(get_db), current_user: int = Depends
     return user
 
 @router.get("/all", response_model=List[schemas.User])
-def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
-    users = db.query(models.User).all()
+def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), search: Optional[str] = ""):
+    users = db.query(models.User).filter(func.lower(models.User.name).contains(search.lower())).all()
     return users
 
 @router.put("/change_password", status_code=status.HTTP_200_OK)
