@@ -11,16 +11,13 @@ router = APIRouter(
     tags=['Posts']
 )
 
-# @router.get("/sqlalchemy")
-# def test_posts(db: Session = Depends(get_db)):
-    # posts = db.query(models.Post).all()
-    # return {"data":posts}
-
 @router.get("/")
 def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), limit: int = 5, skip: int = 0, search: Optional[str] = ""):
     
     subquery_vote = case((func.count().filter(models.Vote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_voted")
     subquery_downvote = case((func.count().filter(models.DownVote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_downvoted")
+
+    search_lower = search.lower()
 
     posts_query =  posts_query = (
         db.query(
@@ -39,7 +36,7 @@ def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.
         .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
         .group_by(models.Post.id)
         .filter(models.Post.published == True)
-        .filter(models.Post.title.contains(search))
+        .filter(func.lower(models.Post.title).contains(search_lower) | func.lower(models.Post.content).contains(search_lower))
         .order_by(desc(models.Post.created_at))
         .limit(limit)
         .offset(skip)
@@ -53,7 +50,7 @@ def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.
         'user_name': post.user_name,
         'title': post.title,
         'content': post.content,
-        'created_at': post.created_at,  # Use the created_at_str we added
+        'created_at': post.created_at,
         'votes': post.votes,
         'downvotes': post.downvotes,
         'user_voted': post.user_voted,
