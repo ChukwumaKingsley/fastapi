@@ -18,6 +18,11 @@ class User(BaseModel):
     name: str
     class config: 
         orm_mode = True
+        
+class UserOut(User):
+    votes_count: int
+    downvotes_count: int
+    posts_count: int
 
 class UserLogin(BaseModel):
     email: EmailStr

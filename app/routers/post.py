@@ -19,7 +19,7 @@ def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.
 
     search_lower = search.lower()
 
-    posts_query =  posts_query = (
+    posts_query = (
         db.query(
             models.Post.id,
             models.Post.user_id,
