@@ -94,6 +94,10 @@ def update_user(user_data: schemas.UserUpdate, db: Session = Depends(get_db), cu
     for key, value in user_data.dict().items():
         setattr(user, key, value)
 
+
+    #update username in posts table
+    db.query(models.Post).filter(models.Post.user_id == current_user.id).update({"user_name": user_data.name}, synchronize_session=False)
+
     db.commit()
     db.refresh(user)
     return user

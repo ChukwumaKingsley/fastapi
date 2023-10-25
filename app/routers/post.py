@@ -16,6 +16,62 @@ def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.
     
     subquery_vote = case((func.count().filter(models.Vote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_voted")
     subquery_downvote = case((func.count().filter(models.DownVote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_downvoted")
+    is_creator = case(
+        (models.Post.user_id == current_user.id, literal(True)),
+        else_=literal(False)
+    ).label("is_creator")
+
+    search_lower = search.lower()
+
+    posts_query = (
+        db.query(
+            models.Post.id,
+            models.Post.user_id,
+            models.Post.user_name,
+            models.Post.title,
+            models.Post.content,
+            func.cast(models.Post.created_at, String).label("created_at"),
+            func.count(models.Vote.post_id).label("votes"),
+            func.count(models.DownVote.post_id).label("downvotes"),
+            subquery_vote,
+            subquery_downvote,
+            is_creator,
+        )
+        .outerjoin(models.Vote, models.Vote.post_id == models.Post.id)
+        .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
+        .group_by(models.Post.id)
+        .filter(models.Post.published == True)
+        .filter(func.lower(models.Post.title).contains(search_lower) | func.lower(models.Post.content).contains(search_lower))
+        .order_by(desc(models.Post.created_at))
+        .limit(limit)
+        .offset(skip)
+        .all()
+    )
+
+    def serialize_post(post):
+        post_dict = {
+        'id': post.id,
+        'user_id': post.user_id,
+        'user_name': post.user_name,
+        'title': post.title,
+        'content': post.content,
+        'created_at': post.created_at,
+        'votes': post.votes,
+        'downvotes': post.downvotes,
+        'user_voted': post.user_voted,
+        'user_downvoted': post.user_downvoted,
+        'is_creator': post.is_creator,
+    }
+        return post_dict
+    serialized_posts = [serialize_post(post) for post in posts_query]
+
+    return JSONResponse(content=serialized_posts)
+
+@router.get("/my_posts")
+def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), limit: int = 5, skip: int = 0, search: Optional[str] = ""):
+    
+    subquery_vote = case((func.count().filter(models.Vote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_voted")
+    subquery_downvote = case((func.count().filter(models.DownVote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_downvoted")
 
     search_lower = search.lower()
 
@@ -35,7 +91,7 @@ def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.
         .outerjoin(models.Vote, models.Vote.post_id == models.Post.id)
         .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
         .group_by(models.Post.id)
-        .filter(models.Post.published == True)
+        .filter(models.Post.published == True, models.Post.user_id == current_user.id)
         .filter(func.lower(models.Post.title).contains(search_lower) | func.lower(models.Post.content).contains(search_lower))
         .order_by(desc(models.Post.created_at))
         .limit(limit)
@@ -61,12 +117,44 @@ def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.
 
     return JSONResponse(content=serialized_posts)
 
-@router.get("/my_posts")
-def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
-    my_posts = db.query(models.Post).filter(models.Post.user_id == current_user.id).all()
+@router.get("/drafts")
+def get_drafts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), limit: int = 5, skip: int = 0, search: Optional[str] = ""):
+    
+    subquery_vote = case((func.count().filter(models.Vote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_voted")
+    subquery_downvote = case((func.count().filter(models.DownVote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_downvoted")
 
-    return my_posts
+    search_lower = search.lower()
 
+    posts_query = (
+        db.query(
+            models.Post.id,
+            models.Post.user_id,
+            models.Post.user_name,
+            models.Post.title,
+            models.Post.content,
+            func.cast(models.Post.created_at, String).label("created_at"),
+        )
+        .filter(models.Post.published == False, models.Post.user_id == current_user.id)
+        .filter(func.lower(models.Post.title).contains(search_lower) | func.lower(models.Post.content).contains(search_lower))
+        .order_by(desc(models.Post.created_at))
+        .limit(limit)
+        .offset(skip)
+        .all()
+    )
+
+    def serialize_post(post):
+        post_dict = {
+        'id': post.id,
+        'user_id': post.user_id,
+        'user_name': post.user_name,
+        'title': post.title,
+        'content': post.content,
+        'created_at': post.created_at,
+    }
+        return post_dict
+    serialized_posts = [serialize_post(post) for post in posts_query]
+
+    return JSONResponse(content=serialized_posts)
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model = schemas.PostCreate)
 def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
