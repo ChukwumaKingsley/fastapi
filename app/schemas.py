@@ -25,7 +25,7 @@ class UserOut(User):
     posts_count: int
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 class UserUpdate(BaseModel):
