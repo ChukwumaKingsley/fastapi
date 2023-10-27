@@ -37,10 +37,8 @@ def get_user(db: Session = Depends(get_db), current_user: int = Depends(oauth2.g
 
     # Count the number of votes for the current user
     num_votes = db.query(func.count(models.Vote.user_id)).filter(models.Vote.user_id == current_user.id).scalar()
-
     # Count the number of downvotes for the current user
     num_downvotes = db.query(func.count(models.DownVote.user_id)).filter(models.DownVote.user_id == current_user.id).scalar()
-
     # Count the number of posts for the current user
     num_posts = db.query(func.count(models.Post.user_id)).filter(models.Post.user_id == current_user.id).scalar()
     print(num_votes, num_downvotes, num_posts)
@@ -51,11 +49,23 @@ def get_user(db: Session = Depends(get_db), current_user: int = Depends(oauth2.g
 
     return user
 
-@router.get("/user/{id}", response_model = schemas.User)
+@router.get("/user/{id}", response_model = schemas.UserOut)
 def get_user(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     user = db.query(models.User).filter(models.User.id == id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail = f"User with id {id} does not exist!")
+    
+    # Count the number of votes for the current user
+    num_votes = db.query(func.count(models.Vote.user_id)).filter(models.Vote.user_id == id).scalar()
+    # Count the number of downvotes for the current user
+    num_downvotes = db.query(func.count(models.DownVote.user_id)).filter(models.DownVote.user_id == id).scalar()
+    # Count the number of posts for the current user
+    num_posts = db.query(func.count(models.Post.user_id)).filter(models.Post.user_id == id).scalar()
+    print(num_votes, num_downvotes, num_posts)
+    # Add the counts to the user object
+    user.votes_count = num_votes
+    user.downvotes_count = num_downvotes
+    user.posts_count = num_posts
     return user
 
 @router.get("/all", response_model=List[schemas.User])

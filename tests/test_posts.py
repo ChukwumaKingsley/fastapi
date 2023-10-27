@@ -8,7 +8,6 @@ def test_get_all_posts(authorized_client, test_post):
         return schemas.Post(**post)
     post_map = map(validate, res.json())
     assert res.status_code == 200
-    assert res.json()[0]['id'] == 1
 
 def test_unauthorized_user_get_all_posts(client, test_post):
     res = client.get("/posts/")

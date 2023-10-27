@@ -37,7 +37,7 @@ def client(session):
     
 @pytest.fixture
 def test_user(client):
-     user_data = {"email": "test@gmail.com", "password": "testpassword"}
+     user_data = {"email": "test@gmail.com", "password": "testpassword", "name": "testname"}
      res = client.post("/users/", json=user_data)
      assert res.status_code == 201
      new_user = res.json()
@@ -46,7 +46,7 @@ def test_user(client):
 
 @pytest.fixture
 def test_user2(client):
-     user_data = {"email": "test2@gmail.com", "password": "testpassword"}
+     user_data = {"email": "test2@gmail.com", "password": "testpassword", "name": "testname2"}
      res = client.post("/users/", json=user_data)
      assert res.status_code == 201
      new_user = res.json()
@@ -72,22 +72,26 @@ def test_post(session, test_user, test_user2):
         {
             "title": "One titile",
             "content": "Another content",
-            "user_id": test_user['id']
+            "user_id": test_user['id'],
+            "user_name": test_user['name']
         },
         {
             "title": "Two titile",
             "content": "Another Two content",
-            "user_id": test_user['id']
+            "user_id": test_user['id'],
+            "user_name": test_user['name']
         },
         {
             "title": "3 titile",
             "content": "3 Another content",
-            "user_id": test_user['id']
+            "user_id": test_user['id'],
+            "user_name": test_user['name']
         },
         {
             "title": "One titile four",
             "content": "Another content four",
-            "user_id": test_user2['id']
+            "user_id": test_user2['id'],
+            "user_name": test_user2['name']
         }
     ]
 
