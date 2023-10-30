@@ -16,6 +16,7 @@ class User(BaseModel):
     id: int
     created_at: datetime
     name: str
+    password: str
     class config: 
         orm_mode = True
         
