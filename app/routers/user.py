@@ -112,3 +112,19 @@ def update_user(user_data: schemas.UserUpdate, db: Session = Depends(get_db), cu
     db.commit()
     db.refresh(user)
     return user
+
+@router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+    user_query = db.query(models.User).filter(models.User.id == current_user.id)
+    user = user_query.first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail = f'user with does not exist.')
+    
+    if user.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f'Not authorized to perform requested action!')
+    
+    user_query.delete(synchronize_session=False)
+    db.commit()
+    return {"message": f"user with was successfully deleted!"}
