@@ -1,9 +1,18 @@
 from typing import List, Optional
-from fastapi import Depends, HTTPException, status, APIRouter
+from fastapi import Depends, Form, HTTPException, UploadFile, status, APIRouter
 from sqlalchemy import func
 from .. import models, schemas, utils, oauth2
 from ..database import Session, get_db
 from pydantic import EmailStr
+import cloudinary.uploader
+from ..config import settings
+
+cloudinary.config(
+    cloud_name= settings.cloud_api_name,
+    api_key=settings.cloud_api_key,
+    api_secret=settings.cloud_api_secret
+)
+
 
 router = APIRouter(
     prefix="/users",
@@ -96,18 +105,31 @@ def update_password(UserData: schemas.PasswordUpdate, current_user: int = Depend
     return "Password was successfully changed"
 
 @router.put("/update", status_code=status.HTTP_200_OK, response_model=schemas.UserUpdated)
-def update_user(user_data: schemas.UserUpdate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+def update_user(
+    name: str = Form(...),
+    profile_picture: UploadFile = Form(None),
+    db: Session = Depends(get_db),
+    current_user: int = Depends(oauth2.get_current_user)
+    ):
     user = db.query(models.User).filter(models.User.id == current_user.id).first()
+
 
     if user.id != current_user.id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized to change another's details")
 
-    for key, value in user_data.dict().items():
-        setattr(user, key, value)
+    api_key = settings.cloud_api_key
+    api_secret = settings.cloud_api_secret
 
+    headers = {
+        'Authorization': f'Basic {api_key}:{api_secret}'
+    }
 
-    #update username in posts table
-    db.query(models.Post).filter(models.Post.user_id == current_user.id).update({"user_name": user_data.name}, synchronize_session=False)
+    if profile_picture:
+        response = cloudinary.uploader.upload(profile_picture.file, headers=headers)
+        image_url = response.get("secure_url")
+        db.query(models.User).filter(models.User.id == current_user.id).update({"name": name, "profile_pic": image_url}, synchronize_session=False)
+    else:
+        db.query(models.User).filter(models.User.id == current_user.id).update({"name": name}, synchronize_session=False)
 
     db.commit()
     db.refresh(user)
