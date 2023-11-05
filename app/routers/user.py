@@ -51,7 +51,6 @@ def get_user(db: Session = Depends(get_db), current_user: int = Depends(oauth2.g
     num_downvotes = db.query(func.count(models.DownVote.user_id)).filter(models.DownVote.user_id == current_user.id).scalar()
     # Count the number of posts for the current user
     num_posts = db.query(func.count(models.Post.user_id)).filter(models.Post.user_id == current_user.id).scalar()
-    print(num_votes, num_downvotes, num_posts)
     # Add the counts to the user object
     user.votes_count = num_votes
     user.downvotes_count = num_downvotes
@@ -71,7 +70,6 @@ def get_user(id: int, db: Session = Depends(get_db), current_user: int = Depends
     num_downvotes = db.query(func.count(models.DownVote.user_id)).filter(models.DownVote.user_id == id).scalar()
     # Count the number of posts for the current user
     num_posts = db.query(func.count(models.Post.user_id)).filter(models.Post.user_id == id).scalar()
-    print(num_votes, num_downvotes, num_posts)
     # Add the counts to the user object
     user.votes_count = num_votes
     user.downvotes_count = num_downvotes
@@ -107,7 +105,7 @@ def update_password(UserData: schemas.PasswordUpdate, current_user: int = Depend
 @router.put("/update", status_code=status.HTTP_200_OK, response_model=schemas.UserUpdated)
 def update_user(
     name: str = Form(...),
-    profile_picture: UploadFile = Form(None),
+    profile_pic: UploadFile = Form(None),
     db: Session = Depends(get_db),
     current_user: int = Depends(oauth2.get_current_user)
     ):
@@ -124,9 +122,10 @@ def update_user(
         'Authorization': f'Basic {api_key}:{api_secret}'
     }
 
-    if profile_picture:
+    print(profile_pic)
+    if profile_pic:
         response = cloudinary.uploader.upload(
-            profile_picture.file,
+            profile_pic.file,
             public_id="profile_picture"+str(current_user.id),
             folder="kornekt-profile-pics",
             headers=headers
