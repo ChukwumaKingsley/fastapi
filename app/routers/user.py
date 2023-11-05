@@ -125,7 +125,12 @@ def update_user(
     }
 
     if profile_picture:
-        response = cloudinary.uploader.upload(profile_picture.file, headers=headers)
+        response = cloudinary.uploader.upload(
+            profile_picture.file,
+            public_id="profile_picture"+str(current_user.id),
+            folder="kornekt-profile-pics",
+            headers=headers
+        )
         image_url = response.get("secure_url")
         db.query(models.User).filter(models.User.id == current_user.id).update({"name": name, "profile_pic": image_url}, synchronize_session=False)
     else:
