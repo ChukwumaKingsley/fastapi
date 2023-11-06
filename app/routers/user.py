@@ -1,9 +1,18 @@
 from typing import List, Optional
-from fastapi import Depends, HTTPException, status, APIRouter
-from sqlalchemy import func
+from fastapi import Depends, Form, HTTPException, UploadFile, status, APIRouter
+from sqlalchemy import case, func, literal
 from .. import models, schemas, utils, oauth2
 from ..database import Session, get_db
 from pydantic import EmailStr
+import cloudinary.uploader
+from ..config import settings
+
+cloudinary.config(
+    cloud_name= settings.cloud_api_name,
+    api_key=settings.cloud_api_key,
+    api_secret=settings.cloud_api_secret
+)
+
 
 router = APIRouter(
     prefix="/users",
@@ -42,7 +51,6 @@ def get_user(db: Session = Depends(get_db), current_user: int = Depends(oauth2.g
     num_downvotes = db.query(func.count(models.DownVote.user_id)).filter(models.DownVote.user_id == current_user.id).scalar()
     # Count the number of posts for the current user
     num_posts = db.query(func.count(models.Post.user_id)).filter(models.Post.user_id == current_user.id).scalar()
-    print(num_votes, num_downvotes, num_posts)
     # Add the counts to the user object
     user.votes_count = num_votes
     user.downvotes_count = num_downvotes
@@ -62,16 +70,20 @@ def get_user(id: int, db: Session = Depends(get_db), current_user: int = Depends
     num_downvotes = db.query(func.count(models.DownVote.user_id)).filter(models.DownVote.user_id == id).scalar()
     # Count the number of posts for the current user
     num_posts = db.query(func.count(models.Post.user_id)).filter(models.Post.user_id == id).scalar()
-    print(num_votes, num_downvotes, num_posts)
     # Add the counts to the user object
     user.votes_count = num_votes
     user.downvotes_count = num_downvotes
     user.posts_count = num_posts
     return user
 
-@router.get("/all", response_model=List[schemas.User])
+@router.get("/all", response_model=List[schemas.UsersData])
 def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), search: Optional[str] = ""):
     users = db.query(models.User).filter(func.lower(models.User.name).contains(search.lower())).all()
+
+    # Add a new column current_user to the results
+    for user in users:
+        user.current_user = user.id == current_user.id
+
     return users
 
 @router.put("/change_password", status_code=status.HTTP_200_OK)
@@ -96,19 +108,38 @@ def update_password(UserData: schemas.PasswordUpdate, current_user: int = Depend
     return "Password was successfully changed"
 
 @router.put("/update", status_code=status.HTTP_200_OK, response_model=schemas.UserUpdated)
-def update_user(user_data: schemas.UserUpdate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+def update_user(
+    name: str = Form(...),
+    profile_pic: UploadFile = Form(None),
+    db: Session = Depends(get_db),
+    current_user: int = Depends(oauth2.get_current_user)
+    ):
     user = db.query(models.User).filter(models.User.id == current_user.id).first()
+
 
     if user.id != current_user.id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized to change another's details")
 
-    for key, value in user_data.dict().items():
-        setattr(user, key, value)
+    api_key = settings.cloud_api_key
+    api_secret = settings.cloud_api_secret
 
+    headers = {
+        'Authorization': f'Basic {api_key}:{api_secret}'
+    }
 
-    #update username in posts table
-    db.query(models.Post).filter(models.Post.user_id == current_user.id).update({"user_name": user_data.name}, synchronize_session=False)
-
+    if profile_pic:
+        response = cloudinary.uploader.upload(
+            profile_pic.file,
+            public_id="profile_picture"+str(current_user.id),
+            folder="kornekt-profile-pics",
+            headers=headers
+        )
+        image_url = response.get("secure_url")
+        db.query(models.User).filter(models.User.id == current_user.id).update({"name": name, "profile_pic": image_url}, synchronize_session=False)
+        db.query(models.Post).filter(models.Post.user_id == current_user.id).update({"user_name": name})
+    else:
+        db.query(models.User).filter(models.User.id == current_user.id).update({"name": name}, synchronize_session=False)
+        db.query(models.Post).filter(models.Post.user_id == current_user.id).update({"user_name": name})
     db.commit()
     db.refresh(user)
     return user
