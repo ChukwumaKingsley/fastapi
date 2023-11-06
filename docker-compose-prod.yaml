@@ -19,6 +19,9 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ALGORITHM=${ALGORITHM}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - CLOUD_API_KEY=${{CLOUD_API_KEY}}
+      - CLOUD_API_SECRET=${{CLOUD_API_SECRET}}
+      - CLOUD_API_NAME=${{CLOUD_API_NAME}}
 
   postgres:
     image: postgres

@@ -23,6 +23,9 @@ jobs:
       SECRET_KEY: ${{secrets.SECRET_KEY}}
       ALGORITHM: ${{secrets.ALGORITHM}}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${{secrets.ACCESS_TOKEN_EXPIRE_MINUTES}}
+      CLOUD_API_KEY: ${{secrets.CLOUD_API_KEY}}
+      CLOUD_API_SECRET: ${{secrets.CLOUD_API_SECRET}}
+      CLOUD_API_NAME: ${{secrets.CLOUD_API_NAME}}
 
     services:
       postgres:

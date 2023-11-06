@@ -1,4 +1,5 @@
 from typing import Optional
+from fastapi import UploadFile
 from pydantic import BaseModel, EmailStr, conint, field_validator
 from datetime import datetime
 
@@ -17,8 +18,12 @@ class User(BaseModel):
     created_at: datetime
     name: str
     password: str
+    profile_pic: Optional[str] = None
     class config: 
         orm_mode = True
+
+class UsersData(User):
+    current_user: bool
         
 class UserOut(User):
     votes_count: int
@@ -31,8 +36,11 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     name: str
+    profile_pic: Optional[UploadFile] = None
 
-class UserUpdated(UserUpdate):
+class UserUpdated(BaseModel):
+    name: str
+    profile_pic: Optional[str] = None
     email: EmailStr
     id: int
 
