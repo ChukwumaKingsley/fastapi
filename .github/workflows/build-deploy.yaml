@@ -1,14 +1,14 @@
 name: Build and Deploy Code
 
-# on:
-#   push:
-#     branches:
-#       - "main"
-#   pull-request:
-#     branches:
-#       - "main"
+on:
+  push:
+    branches:
+      - "main"
+  pull-request:
+    branches:
+      - "main"
 
-on: [push, pull_request]
+# on: [push, pull_request]
 
 jobs:
   build:
