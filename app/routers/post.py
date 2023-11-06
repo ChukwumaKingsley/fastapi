@@ -21,6 +21,11 @@ def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.
         (models.Post.user_id == current_user.id, literal(True)),
         else_=literal(False)
     ).label("is_creator")
+    subquery_profile_pic = (
+        db.query(models.User.profile_pic)
+        .filter(models.User.id == models.Post.user_id)
+        .label("profile_pic")
+    )
 
     search_lower = search.lower()
     current_time = datetime.now()
@@ -43,7 +48,8 @@ def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.
             subquery_vote,
             subquery_downvote,
             is_creator,
-            is_editable
+            is_editable,
+            subquery_profile_pic
         )
         .outerjoin(models.Vote, models.Vote.post_id == models.Post.id)
         .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
@@ -69,7 +75,8 @@ def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.
         'user_voted': post.user_voted,
         'user_downvoted': post.user_downvoted,
         'is_creator': post.is_creator,
-        'is_editable': post.is_editable
+        'is_editable': post.is_editable,
+        'profile_pic': post.profile_pic
     }
         return post_dict
     serialized_posts = [serialize_post(post) for post in posts_query]
@@ -89,6 +96,11 @@ def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oaut
                     literal(True)),
                 else_=literal(False)
             ).label("is_editable")
+    subquery_profile_pic = (
+        db.query(models.User.profile_pic)
+        .filter(models.User.id == models.Post.user_id)
+        .label("profile_pic")
+    )
 
     posts_query = (
         db.query(
@@ -103,6 +115,7 @@ def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oaut
             subquery_vote,
             subquery_downvote,
             is_editable,
+            subquery_profile_pic
         )
         .outerjoin(models.Vote, models.Vote.post_id == models.Post.id)
         .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
@@ -128,6 +141,8 @@ def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oaut
         'user_voted': post.user_voted,
         'user_downvoted': post.user_downvoted,
         'is_editable': post.is_editable,
+        'profile_pic': post.profile_pic
+
     }
         return post_dict
     serialized_posts = [serialize_post(post) for post in posts_query]
@@ -147,6 +162,11 @@ def get_user_posts(id: int, db: Session = Depends(get_db), current_user: int = D
                     literal(True)),
                 else_=literal(False)
             ).label("is_editable")
+    subquery_profile_pic = (
+        db.query(models.User.profile_pic)
+        .filter(models.User.id == models.Post.user_id)
+        .label("profile_pic")
+    )
 
     posts_query = (
         db.query(
@@ -161,6 +181,7 @@ def get_user_posts(id: int, db: Session = Depends(get_db), current_user: int = D
             subquery_vote,
             subquery_downvote,
             is_editable,
+            subquery_profile_pic
         )
         .outerjoin(models.Vote, models.Vote.post_id == models.Post.id)
         .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
@@ -186,6 +207,7 @@ def get_user_posts(id: int, db: Session = Depends(get_db), current_user: int = D
         'user_voted': post.user_voted,
         'user_downvoted': post.user_downvoted,
         'is_editable': post.is_editable,
+        'profile_pic': post.profile_pic
     }
         return post_dict
     serialized_posts = [serialize_post(post) for post in posts_query]
@@ -205,6 +227,12 @@ def get_my_likes(db: Session = Depends(get_db), current_user: int = Depends(oaut
                     literal(True)),
                 else_=literal(False)
             ).label("is_editable")
+    subquery_profile_pic = (
+        db.query(models.User.profile_pic)
+        .filter(models.User.id == models.Post.user_id)
+        .label("profile_pic")
+    )
+
 
     posts_query = (
         db.query(
@@ -219,6 +247,7 @@ def get_my_likes(db: Session = Depends(get_db), current_user: int = Depends(oaut
             subquery_vote,
             subquery_downvote,
             is_editable,
+            subquery_profile_pic
         )
         .outerjoin(models.Vote, models.Vote.post_id == models.Post.id)
         .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
@@ -244,6 +273,8 @@ def get_my_likes(db: Session = Depends(get_db), current_user: int = Depends(oaut
         'user_voted': post.user_voted,
         'user_downvoted': post.user_downvoted,
         'is_editable': post.is_editable,
+        'profile_pic': post.profile_pic
+
     }
         return post_dict
     serialized_posts = [serialize_post(post) for post in posts_query]
@@ -263,6 +294,11 @@ def get_user_likes(id: int, db: Session = Depends(get_db), current_user: int = D
                     literal(True)),
                 else_=literal(False)
             ).label("is_editable")
+    subquery_profile_pic = (
+        db.query(models.User.profile_pic)
+        .filter(models.User.id == models.Post.user_id)
+        .label("profile_pic")
+    )
 
     posts_query = (
         db.query(
@@ -277,6 +313,7 @@ def get_user_likes(id: int, db: Session = Depends(get_db), current_user: int = D
             subquery_vote,
             subquery_downvote,
             is_editable,
+            subquery_profile_pic
         )
         .outerjoin(models.Vote, models.Vote.post_id == models.Post.id)
         .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
@@ -302,6 +339,8 @@ def get_user_likes(id: int, db: Session = Depends(get_db), current_user: int = D
         'user_voted': post.user_voted,
         'user_downvoted': post.user_downvoted,
         'is_editable': post.is_editable,
+        'profile_pic': post.profile_pic
+
     }
         return post_dict
     serialized_posts = [serialize_post(post) for post in posts_query]
@@ -321,6 +360,11 @@ def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oaut
                     literal(True)),
                 else_=literal(False)
             ).label("is_editable")
+    subquery_profile_pic = (
+        db.query(models.User.profile_pic)
+        .filter(models.User.id == models.Post.user_id)
+        .label("profile_pic")
+    )
 
     posts_query = (
         db.query(
@@ -335,6 +379,7 @@ def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oaut
             subquery_vote,
             subquery_downvote,
             is_editable,
+            subquery_profile_pic
         )
         .outerjoin(models.Vote, models.Vote.post_id == models.Post.id)
         .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
@@ -360,6 +405,8 @@ def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oaut
         'user_voted': post.user_voted,
         'user_downvoted': post.user_downvoted,
         'is_editable': post.is_editable,
+        'profile_pic': post.profile_pic
+
     }
         return post_dict
     serialized_posts = [serialize_post(post) for post in posts_query]
