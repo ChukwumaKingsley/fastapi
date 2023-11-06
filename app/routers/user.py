@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import Depends, Form, HTTPException, UploadFile, status, APIRouter
-from sqlalchemy import func
+from sqlalchemy import case, func, literal
 from .. import models, schemas, utils, oauth2
 from ..database import Session, get_db
 from pydantic import EmailStr
@@ -76,9 +76,14 @@ def get_user(id: int, db: Session = Depends(get_db), current_user: int = Depends
     user.posts_count = num_posts
     return user
 
-@router.get("/all", response_model=List[schemas.User])
+@router.get("/all", response_model=List[schemas.UsersData])
 def get_all_users(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), search: Optional[str] = ""):
     users = db.query(models.User).filter(func.lower(models.User.name).contains(search.lower())).all()
+
+    # Add a new column current_user to the results
+    for user in users:
+        user.current_user = user.id == current_user.id
+
     return users
 
 @router.put("/change_password", status_code=status.HTTP_200_OK)
@@ -122,7 +127,6 @@ def update_user(
         'Authorization': f'Basic {api_key}:{api_secret}'
     }
 
-    print(profile_pic)
     if profile_pic:
         response = cloudinary.uploader.upload(
             profile_pic.file,
@@ -132,9 +136,10 @@ def update_user(
         )
         image_url = response.get("secure_url")
         db.query(models.User).filter(models.User.id == current_user.id).update({"name": name, "profile_pic": image_url}, synchronize_session=False)
+        db.query(models.Post).filter(models.Post.user_id == current_user.id).update({"user_name": name})
     else:
         db.query(models.User).filter(models.User.id == current_user.id).update({"name": name}, synchronize_session=False)
-
+        db.query(models.Post).filter(models.Post.user_id == current_user.id).update({"user_name": name})
     db.commit()
     db.refresh(user)
     return user

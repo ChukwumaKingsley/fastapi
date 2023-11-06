@@ -21,6 +21,9 @@ class User(BaseModel):
     profile_pic: Optional[str] = None
     class config: 
         orm_mode = True
+
+class UsersData(User):
+    current_user: bool
         
 class UserOut(User):
     votes_count: int

@@ -96,6 +96,7 @@ def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oaut
                     literal(True)),
                 else_=literal(False)
             ).label("is_editable")
+    
     subquery_profile_pic = (
         db.query(models.User.profile_pic)
         .filter(models.User.id == models.Post.user_id)
@@ -162,6 +163,7 @@ def get_user_posts(id: int, db: Session = Depends(get_db), current_user: int = D
                     literal(True)),
                 else_=literal(False)
             ).label("is_editable")
+    
     subquery_profile_pic = (
         db.query(models.User.profile_pic)
         .filter(models.User.id == models.Post.user_id)
@@ -413,7 +415,71 @@ def get_my_posts(db: Session = Depends(get_db), current_user: int = Depends(oaut
 
     return JSONResponse(content=serialized_posts)
 
+@router.get("/user_downvotes/{id}")
+def get_user_likes(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), limit: int = 5, skip: int = 0, search: Optional[str] = ""):
+    
+    subquery_vote = case((func.count().filter(models.Vote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_voted")
+    subquery_downvote = case((func.count().filter(models.DownVote.user_id == current_user.id) > 0, literal(True)), else_=literal(False)).label("user_downvoted")
 
+    search_lower = search.lower()
+    current_time = datetime.now()
+    is_editable = case((
+                    (current_time - models.Post.created_at) <= timedelta(minutes=30),
+                    literal(True)),
+                else_=literal(False)
+            ).label("is_editable")
+    subquery_profile_pic = (
+        db.query(models.User.profile_pic)
+        .filter(models.User.id == models.Post.user_id)
+        .label("profile_pic")
+    )
+
+    posts_query = (
+        db.query(
+            models.Post.id,
+            models.Post.user_id,
+            models.Post.user_name,
+            models.Post.title,
+            models.Post.content,
+            func.cast(models.Post.created_at, String).label("created_at"),
+            func.count(models.Vote.post_id).label("votes"),
+            func.count(models.DownVote.post_id).label("downvotes"),
+            subquery_vote,
+            subquery_downvote,
+            is_editable,
+            subquery_profile_pic
+        )
+        .outerjoin(models.Vote, models.Vote.post_id == models.Post.id)
+        .outerjoin(models.DownVote, models.DownVote.post_id == models.Post.id)
+        .group_by(models.Post.id)
+        .filter(models.Post.published == True, models.DownVote.user_id == id)
+        .filter(func.lower(models.Post.title).contains(search_lower) | func.lower(models.Post.content).contains(search_lower))
+        .order_by(desc(models.Post.created_at))
+        .limit(limit)
+        .offset(skip)
+        .all()
+    )
+
+    def serialize_post(post):
+        post_dict = {
+        'id': post.id,
+        'user_id': post.user_id,
+        'user_name': post.user_name,
+        'title': post.title,
+        'content': post.content,
+        'created_at': post.created_at,
+        'votes': post.votes,
+        'downvotes': post.downvotes,
+        'user_voted': post.user_voted,
+        'user_downvoted': post.user_downvoted,
+        'is_editable': post.is_editable,
+        'profile_pic': post.profile_pic
+
+    }
+        return post_dict
+    serialized_posts = [serialize_post(post) for post in posts_query]
+
+    return JSONResponse(content=serialized_posts)
 
 @router.get("/drafts")
 def get_drafts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), limit: int = 5, skip: int = 0, search: Optional[str] = ""):
