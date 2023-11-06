@@ -14,6 +14,6 @@ class Settings(BaseSettings):
     cloud_api_name: str
 
     class Config:
-        env_file = ".env_prod"
+        env_file = ".env"
 
 settings = Settings()
